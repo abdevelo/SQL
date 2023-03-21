@@ -1,0 +1,231 @@
+/*
+ * 
+ * Q2-1
+ * (1) 테이블
+ * (2) 외래 키
+ * (3) 널(NULL)
+ * 
+ * Q2-2
+ * (1) 문자셋(CharacterSet)
+ * (2) 문자셋(CharSet)
+ * 
+ * Q2-3
+ * (1) VARCHAR2
+ * (2) CHAR
+ * 
+ * Q2-4
+ * (1) 제약 조건
+ * (2) 기본키(Primary Key)
+ * (3) 외래키(Foreign Key)
+ * 
+ * Q2-5
+ * (1) 무결성
+ * (2) 무결성
+ * (3) 무결성
+ * 
+ * Q2-6
+ * (1) Unique 
+ * (2) Not Null
+ * (3) Index
+ * 
+ */
+ -- EXP테이블을 사용하여 
+ -- 1.
+
+SELECT TRUNC(AVG(SAL)) AS AVG_SAL
+	, MAX(SAL) AS MAX_SAL
+	, MIN(SAL) AS MIN_SAL
+	, COUNT(EMPNO) AS CNT
+FROM EMP
+GROUP BY DEPTNO
+;
+
+--2. 
+
+SELECT JOB 
+	, COUNT(*)
+FROM EMP e 
+GROUP BY JOB
+HAVING COUNT(E.EMPNO) >= 3
+;
+
+--3.
+
+SELECT TO_CHAR(HIREDATE, 'YYYY') AS HIRE_YEAR
+	, E.DEPTNO 
+	, COUNT (E.EMPNO)AS CNT
+FROM EMP E
+GROUP BY(TO_CHAR(HIREDATE, 'YYYY'), E.DEPTNO) 
+;
+
+--4.
+
+SELECT NVL2(COMM,'Y','N') AS EXIST_COMM
+	, COUNT(EMPNO)
+FROM EMP e 
+GROUP BY (NVL2(COMM,'Y','N'))
+;
+
+
+--5. 
+
+SELECT DEPTNO
+	, TO_CHAR(HIREDATE, 'YYYY') AS HIRE_YEAR
+	, COUNT(EMPNO) AS CNT
+	, MAX(SAL) AS MAX_SAL
+	, SUM(SAL) AS SUM_SAL
+	, AVG(SAL) AS AVG_SAL
+FROM EMP e 
+GROUP BY ROLLUP(DEPTNO , TO_CHAR(HIREDATE, 'YYYY')) 
+;
+
+
+
+--EMP와 DEPT테일블을 사용하여
+
+--1.(1) 오라클
+
+SELECT D.DNAME
+	, E1.EMPNO 
+	, E1.ENAME 
+	, E1.SAL
+FROM EMP E1 , DEPT D
+WHERE E1.DEPTNO = D.DEPTNO
+AND SAL > 2000
+;
+
+--1.(2) 표준SQL
+
+SELECT D.DNAME
+	, E1.EMPNO 
+	, E1.ENAME 
+	, E1.SAL
+FROM EMP E1 INNER JOIN DEPT D
+				ON( SAL > 2000 )
+WHERE E1.DEPTNO = D.DEPTNO 
+;
+
+--2.
+
+SELECT E.DEPTNO 
+	, D.DNAME
+	, TRUNC ( AVG(SAL) )AS AVG_SAL 
+	, MAX(SAL) AS MAX_SAL
+	, MIN (SAL) AS MIN_SAL
+	, COUNT (EMPNO) AS CNT
+FROM EMP e , DEPT d 
+WHERE E.DEPTNO = D.DEPTNO 
+GROUP BY E.DEPTNO , D.DNAME 
+;
+
+--3. 
+
+
+SELECT D.DEPTNO 
+	, D.DNAME 
+	, E.EMPNO 
+	, E.ENAME 
+	, E.JOB 
+	, E. SAL 
+FROM EMP e , DEPT d 
+WHERE E.DEPTNO (+) = D.DEPTNO 
+;
+
+
+--4.
+SELECT D.DEPTNO 
+	, D.DNAME 
+	,E.EMPNO 
+	, E.ENAME 
+	, E.MGR 
+	, E.SAL 
+	, E.DEPTNO 
+	, S.LOSAL 
+	, S.HISAL 
+	, S.GRADE
+	, E2.EMPNO AS MGR_EMPNO
+	, E2.ENAME AS MGR_ENAME
+FROM EMP e , EMP e2 , DEPT d , SALGRADE s 
+WHERE E.DEPTNO(+) = D.DEPTNO
+AND E.MGR = E2.EMPNO (+)
+AND E.SAL BETWEEN S.LOSAL(+) AND S.HISAL(+) 
+ORDER BY D.DEPTNO , E.EMPNO 
+;
+
+
+
+-- EMP와 DEPT 이용 2
+--1.
+
+SELECT E.JOB 
+	, E.EMPNO 
+	, E.ENAME 
+	, E.SAL 
+	, E.DEPTNO 
+	, D.DNAME 
+FROM EMP e , DEPT d , SALGRADE s 
+WHERE E.DEPTNO = D.DEPTNO  
+AND	E.JOB = (
+				SELECT JOB
+				FROM EMP 
+				WHERE ENAME = 'ALLEN'
+				)
+AND E.SAL BETWEEN S.LOSAL AND S.HISAL
+;
+
+
+--2. 
+
+SELECT E.EMPNO 
+	, E.ENAME 
+	, D.DNAME 
+	, E.HIREDATE 
+	, D.LOC 
+	, E.SAL 
+	, S.GRADE 
+FROM EMP e , DEPT d , SALGRADE s 
+WHERE E.DEPTNO = D.DEPTNO  
+AND	E.SAL > (
+				SELECT AVG(SAL) 
+				FROM EMP 
+				)
+AND E.SAL BETWEEN S.LOSAL AND S.HISAL
+ORDER BY E.SAL DESC;
+
+
+SELECT * FROM SALGRADE s ;
+
+
+--3. 
+
+SELECT DISTINCT E.EMPNO 
+	, E.ENAME 
+	, E.JOB 
+	, E.DEPTNO 
+	, D.DNAME 
+	, D.LOC 
+FROM EMP e , DEPT d , SALGRADE s 
+WHERE E.DEPTNO = D.DEPTNO  
+AND E.DEPTNO = 10 
+AND e.JOB NOT in
+					( SELECT JOB 
+					FROM EMP e2 
+					WHERE E2.DEPTNO = 30
+					GROUP BY JOB
+					)			
+;
+
+
+--4.
+SELECT E.EMPNO 
+	, E.ENAME 
+	, E.SAL 
+	, S.GRADE 
+FROM EMP e , DEPT d , SALGRADE s 
+WHERE E.DEPTNO = D.DEPTNO
+AND E.SAL BETWEEN S.LOSAL AND S.HISAL 
+AND E.SAL  > ( SELECT MAX(SAL) 
+				FROM EMP e2 
+				WHERE JOB = 'SALESMAN'
+			  )
+;

@@ -1,0 +1,500 @@
+/*
+ * INSERT 구문
+ */
+
+SELECT *
+FROM DEPT_TEMP dt
+;
+
+INSERT INTO DEPT_TEMP (deptno, dname, loc)
+VALUES ( 50, 'DATABASE', 'SEOUL')
+;
+
+SELECT * FROM DEPT_TEMP
+;
+
+ROLLBACK;
+
+SELECT * FROM DEPT_TEMP
+;
+
+INSERT INTO DEPT_TEMP (deptno, dname, loc)
+VALUES ( 70, 'WEB', NULL)
+;
+
+INSERT INTO DEPT_TEMP (deptno, dname, loc)
+VALUES ( 70, 'WEB', NULL)
+;
+
+INSERT INTO DEPT_TEMP (deptno, dname, loc)
+VALUES ( 80, 'MOIBLE', NULL)
+;
+
+INSERT INTO DEPT_TEMP -- 없어도 실행 됨
+VALUES ( 90, 'INCHEON', NULL)
+;
+
+COMMIT;
+
+SELECT * FROM DEPT_TEMP
+;
+
+
+/*
+ * 컬럼 카테고리만 복사해서 새로운 테이블을 생성
+ * 
+ * WHERE 조건절에 1 <> 1
+ */
+
+CREATE TABLE EMP_TEMP AS
+	SELECT * FROM EMP e 
+			WHERE 1<>1
+;
+
+
+SELECT * FROM EMP_TEMP;
+ROLLBACK;
+COMMIT;
+
+INSERT INTO EMP_TEMP (EMPNO, ENAME, JOB, MGR, HIREDATE ,SAL, COMM )
+	VALUES ( 9999, '홍길동', 'PRESIDENT',NULL, TO_DATE('20010101','YYYYMMDD') , 6000, 5000)
+;
+
+INSERT INTO EMP_TEMP (EMPNO, ENAME, JOB, MGR, HIREDATE ,SAL, COMM )
+	VALUES ( 2111, '이순신', 'MANAGER',9999, TO_DATE('07-01-1999','DD-MM-YYYY') , 4000, 5000)
+; -- TO_DATE 에서 날짜 포맷을 '/' 이나 '.' 이나 '-' , ' '(space) 등으로 맞춰주어야 하는듯
+
+INSERT INTO EMP_TEMP (EMPNO, ENAME, JOB, MGR, HIREDATE ,SAL, COMM )
+	VALUES ( 3111, '심청이', 'MANAGER',9999, SYSDATE , 4000, 5000)
+;
+
+COMMIT;
+
+
+SELECT *
+FROM EMP_TEMP
+;
+
+INSERT INTO EMP_TEMP (EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM)
+SELECT E.EMPNO
+	, E.ENAME
+	, E.JOB
+	, E.MGR
+	, E.HIREDATE
+	, E.SAL
+	, E.COMM
+FROM EMP_TEMP e , SALGRADE s 
+WHERE E.SAL BETWEEN S.LOSAL AND S.HISAL AND S.GRADE =1;
+
+SELECT * FROM EMP_TEMP;
+
+
+
+/*
+* UPATE 문 : 필터된 데이터에 대해서 레코드 값을 수정 
+* 
+* UPDAET가 시작되었다 = AUTOCOMMIT해제되었는 지 확인하기 
+*/
+
+CREATE TABLE DEPT_TEMP2
+	AS (SELECT * FROM DEPT)
+;
+
+SELECT * FROM DEPT_TEMP2; --테스트 개발을 위한 임시 테이블 
+
+
+
+/*
+ * 막간 ROWNUM 내용.
+ * 우리가 입력한 적 없는 데이터
+ * 메모리에 저장될 때 자동으로 ROWNUM이 추출된다.
+ */
+
+SELECT *
+FROM DEPT_TEMP2
+WHERE ROWNUM <2;
+
+
+/*
+ *  UPDATE 테이블명
+ * 		SET 컬럼 = '값'
+ * 		WHERE가 반드시 필요하다고 생각하자 
+ * 한 전체 컬럼의 값이 모두 동일하게 바뀌어 버릴 수 있으니. 
+ */
+
+
+UPDATE DEPT_TEMP2
+ SET LOC = 'SEOUL'
+; 
+
+SELECT * FROM DEPT_TEMP2;
+
+ROLLBACK;
+
+SELECT * FROM DEPT_TEMP2;
+
+
+UPDATE DEPT_TEMP2
+SET DNAME='DATABASE'
+	,LOC='SEOUL'
+WHERE DEPTNO=40
+;
+
+COMMIT;
+
+SELECT * FROM DEPT_TEMP2;
+
+
+/*
+* 서브쿼리를 사용하여 UPDATE
+* 
+* 튜플은 수정할 수 없다
+*/
+
+UPDATE DEPT_TEMP2
+SET (DNAME,LOC) = (
+					SELECT DNAME, LOC 
+						FROM DEPT d
+						WHERE DEPTNO = 40
+					)
+WHERE DEPTNO=40;
+
+SELECT * FROM DEPT_TEMP2;
+
+ROLLBACK;
+
+
+/*
+ * DELETE 구문으로 테이블에서 값을 제거 
+ * 
+ * 보통의 경우, DELETE보다는 UPDATE구문으로 상태 값을 변경
+ * 
+ * EX) 근무, 휴직 , 퇴사 등으 유형으로 값을 변경 
+ */
+
+SELECT *
+FROM EMP_TEMP2
+;
+
+CREATE TABLE EMP_TEMP2
+	AS ( SELECT * FROM EMP e)
+;
+
+COMMIT;
+
+
+DELETE FROM EMP_TEMP2
+WHERE JOB='MANAAGER'
+; -- 인사팀에서 MANAGER'인 직원을 삭제 
+
+ROLLBACK;
+
+
+/*
+* WHERE 조건을 좀 더 복잡하게 주고
+* DELTE 실행 
+*/
+
+DELETE FROM EMP_tEMP2
+WHERE EMPNO IN ( SELECT E.EMPNO
+				FROM EMP_TEMP2 E, SALGRADE s
+				WHERE E.SAL BETWEEN S.LOSAL AND S.HISAL
+				AND S.GRADE = 3
+				AND DEPTNO = 30)
+;
+
+SELECT * FROM EMP_TEMP2;
+ROLLBACK;
+
+-- 위의 DELETE 절에 들어간 SUB-QUERY를 따로 실행해보자 
+-- EMPNO 7499,7844
+SELECT E.EMPNO
+FROM EMP_TEMP2 E, SALGRADE s
+WHERE E.SAL BETWEEN S.LOSAL AND S.HISAL
+AND S.GRADE = 3
+AND DEPTNO = 30
+;
+
+
+/*
+* CREATE 문을 정의 : 기존에 없는 테이블 구조를 생성
+* 데이터는 없고, 테이블의 칼럼과 테이터아비, 제약 조건 등의 구조를 생성 
+*/
+
+CREATE TABLE EMP_NEW
+(
+	EMPNO     NUMBER(4),
+	ENAME     VARCHAR2(10),
+	JOB       VARCHAR2(9),
+ 	MGR		  NUMBER(4),
+ 	HIREDATE  DATE,
+ 	SAL 	  NUMBER(7,2),
+ 	COMM 	  NUMBER(7,2),
+ 	DEPTNO	  NUMBER(2)
+ );
+ 
+SELECT *
+FROM EMP
+WHERE ROWNUM <= 5;
+
+ALTER TABLE EMP_NEW 
+ADD HP VARCHAR2(20);
+
+SELECT * FROM EMP_NEW;
+
+
+ALTER TABLE EMP_NEW 
+RENAME COLUMN HP TO TEL_NO; 
+-- 굳이 이렇게 안하고 GUI툴을 사용해서 테이블찾아가서 
+-- 칼럼 오른쪽클림 RENAME해도 이름바꿀 수 있긴하지만
+-- 이런 방법을 추천
+
+ALTER TABLE EMP_NEW 
+MODIFY EMPNO NUMBER(5);
+
+
+ALTER TABLE EMP_NEW 
+DROP COLUMN TEL_NO;
+
+/*
+ * SEQUENCE 일련번호를 생성하여 테이블 관리를 편리하게 하고자 함
+ */
+
+CREATE SEQUENCE SEQ_DEPTSEQ
+	INCREMENT BY 1
+	START WITH 1
+	MAXVALUE 99
+	MINVALUE 1
+	NOCYCLE NOCACHE;
+-- NOCYCLE : 
+
+ALTER SEQUENCE SEQ_DEPTSEQ
+MAXVALUE 999;
+
+CREATE TABLE DEPTSEQ AS SELECT * FROM DEPT;
+DROP TABLE DEPTSEQ;
+SELECT * FROM DEPTSEQ;	
+
+INSERT INTO DEPT_TEMP2 ( DEPTNO, DNAME, LOC)
+VALUES ( SEQ_DEPTSEQ.NEXTVAL, 'DATEABASE','SEOUL');
+
+INSERT INTO DEPT_TEMP2 ( DEPTNO, DNAME, LOC)
+VALUES ( SEQ_DEPTSEQ.NEXTVAL, 'WEB','BUSAN');
+
+INSERT INTO DEPT_TEMP2 ( DEPTNO, DNAME, LOC)
+VALUES ( SEQ_DEPTSEQ.NEXTVAL, 'MOBILE','ILSAN');
+
+SELECT * FROM DEPT_TEMP2 dt ;
+
+ROLLBACK;
+
+
+
+/*
+ * 제약조건 constraints
+ * 
+ * 테이블을 생성할 때, 테이블 칼럼별 제약 조건을 설정
+ * 자주 사용되는 중요한 제약조건 유형
+ * Not null,
+ * Unique,
+ * Primary key( unique&not null)
+ * Foreign key
+ * Default
+ */
+
+CREATE TABLE LOGIN 
+(
+	LOGIN_ID    VARCHAR2(20) NOT NULL,
+	LOGIN_PWD   VARCHAR2(20) NOT NULL,
+	TEL 		VARCHAR2(20)
+);
+
+SELECT * FROM LOGIN;
+
+INSERT INTO LOGIN( LOGIN_ID, LOGIN_PWD, TEL)
+VALUES ('TEST_ID_01', NULL, '010-1234-5678'); --ERROR : NOT NULL이니깐~~
+
+INSERT INTO LOGIN ( LOGIN_ID, LOGIN_PWD)
+VALUES ('TEST_ID_01','1234');
+
+SELECT * FROM LOGIN;
+
+UPDATE LOGIN 
+SET LOGIN_PWD = NULL 
+WHERE LOGIN_ID = 'TEST_ID_01'; -- NULL 안돼~~~
+
+
+/*
+ * TEL 칼럼의 중요성을 나중에 인지하고, NOT NULL 제약조건을 설정 
+ */
+
+ALTER TABLE LOGIN 
+MODIFY ( TEL NOT NULL ); -- TEL값이 NULL인 경우가 이미 존재 하기 때문임
+
+UPDATE LOGIN 
+SET TEL = '010-1234-5678'
+WHERE LOGIN_ID = 'TEST_ID_01'; -- NULL인 테이블 값을 바꿔서 데이터를 넣어주기 
+
+SELECT * FROM LOGIN;
+
+ALTER TABLE LOGIN 
+MODIFY(TEL NOT NULL); -- 성공........... 
+
+SELECT * FROM LOGIN;
+
+
+/*
+ * 제약 조건을 확인해보고 싶을 때  
+ */
+
+SELECT OWNER 
+	, CONSTRAINT_NAME
+	, CONSTRAINT_TYPE
+	, TABLE_NAME
+FROM DBA_CONSTRAINTS --user_constraints 로 확인이 안 되어서 dba_constraints로 바꿔서 확인
+WHERE table_name='LOGIN'
+;  
+-- USER_ ** 테이블에서 조회 시에 확인되지 않을 경우 CONNECTION 아이디 잘 확인하기 
+
+ALTER TABLE LOGIN
+MODIFY TEL CONSTRAINT TEL_NN NOT NULL; --에러
+
+
+
+/*
+ * UNIQUE 키워드
+ */
+
+CREATE TABLE LOGIN_UNIQUE
+(
+	LOGIN_ID   VARCHAR2(20) UNIQUE,
+	LOGIN_PWD  VARCHAR2(20) NOT NULL,
+	TEL        VARCHAR2(20)
+);
+
+SELECT OWNER, CONSTRAINT_NAME, CONSTRAINT_TYPE, 
+TABLE_NAME FROM USER_CONSTRAINTS 
+WHERE TABLE_NAME = 'LOGIN_UNIQUE';
+
+
+
+/*
+ * PK (주키,
+ * 
+ * 
+ */
+
+CREATE TABLE LOG_PK
+(
+	LOG_ID   varchar2(20) PRIMARY KEY,
+	LOG_PWD  varchar2(20) NOT NULL,
+	TEL      varchar2(20)
+);
+
+INSERT INTO LOG_PK ( LOG_ID, LOG_PWD, TEL )
+VALUES ( 'PK01','PWD01','012-3456-8970');
+
+SELECT * FROM LOG_PK;
+
+
+INSERT INTO LOG_PK ( LOG_ID, LOG_PWD, TEL )
+VALUES ( 'PK01','PWD02','011-3456-8979'); -- 기존 PK와 동일 제약조건 위반 
+
+
+
+INSERT INTO TABLE_PK ( LOG_ID, LOG_PWD, TEL )
+VALUES (NULL, 'PWD03', '012-3456-8970'); -- NULL로 위반
+
+
+SELECT * 
+FROM EMP_TEMP
+;
+
+/*
+ * 존재하지 않느 부서번호를 EMP_TEMP 테이블에 입력을 시도 
+ */
+
+ INSERT INTO EMP_TEMP (EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)
+ VALUES (3333, 'GHOST','SURPRISE',9999, SYSDATE , 1200, NULL, 99);
+
+
+
+/*
+ * INDEX 빠른 검색을 위한 색인 
+ * 
+ * 장점 : 순식간에 원하는 값을 찾아 준다
+ * 단점 : 입력과 출력이 잦은 경우, 인덱스가 설정된 테이블의 속도가 저하한다. 
+ */
+
+CREATE INDEX IDX_EMP_SAL
+ON EMP(JOB); -- 특정 직군을 찾는 INDEX개발 
+
+SELECT *
+FROM USER_IND_COLUMNS 
+WHERE TABLE_NAME IN ('EMP','DEPT');
+
+SELECT * FROM EMP;
+
+
+/*
+ * VIEW생성
+ * 
+ * cf)cmd창에서 view생성 권한을 먼저 부여해야 함
+ */
+
+CREATE VIEW VW_EMP 
+AS (
+	SELECT EMPNO, ENAME, JOB, DEPTNO
+		FROM EMP WHERE DEPTNO = 10);
+
+SELECT * FROM VW_EMP;
+
+
+SELECT *
+FROM DBA_VIEWS	
+WHERE VIEW_NAME='VW_EMP'; --테이블명은 대문자로 표기(소문자는 못 알아봄)
+
+
+
+ /*
+  * ROWNUM컬럼 : 상위 N개 출력
+  */
+
+SELECT ROWNUM, E.*
+FROM EMP e 
+ORDER BY SAL DESC;
+
+
+SELECT ROWNUM, E.*
+FROM (
+		SELECT * 
+		FROM EMP e 
+		ORDER BY SAL DESC
+	) E; --SAL 순서대로 데이터를 놓고 새로 ROWNUM을 매김 
+	
+	
+SELECT ROWNUM, E.*
+	FROM (
+		SELECT *
+		FROM EMP e 
+		ORDER BY SAL DESC
+		) E 
+WHERE ROWNUM <=5;
+
+
+/*
+ * 오라클 DBMS 에서 관리하는 관리 테이블 리스트 출력 
+ */
+
+
+SELECT *
+FROM DICT 
+WHERE TABLE_NAME LIKE 'USER_%';
+
+
+SELECT * 
+FROM DBA_TABLES;
+
+SELECT *
+FROM DBA_USERS 
+WHERE USERNAME='TEST';
